@@ -36,8 +36,6 @@ class TransferCard extends StatelessWidget {
         return Colors.amber.shade700;
       case TransferStatus.failed:
         return Colors.red.shade700;
-      default:
-        return Colors.grey.shade600;
     }
   }
 
@@ -49,8 +47,6 @@ class TransferCard extends StatelessWidget {
         return 'PENDIENTE';
       case TransferStatus.failed:
         return 'FALLIDA';
-      default:
-        return 'DESCONOCIDO';
     }
   }
 

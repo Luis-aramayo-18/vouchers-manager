@@ -23,9 +23,9 @@ Future<void> main() async {
     runApp(MyApp(cameras: cameras));
   } on CameraException catch (e) {
     runApp(
-      const MaterialApp(
+       MaterialApp(
         home: Scaffold(
-          body: Center(child: Text("Error al inicializar la cámara.")),
+          body: Center(child: Text('Error al inicializar la cámara. Revise los permisos. $e')),
         ),
       ),
     );

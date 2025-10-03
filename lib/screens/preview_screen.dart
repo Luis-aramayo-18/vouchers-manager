@@ -207,14 +207,12 @@ Future<void> _verifyTransaction() async {
         final double transactionAmount = payment['transaction_amount'].toDouble();
         final String? payerCuil = payment['payer']['identification']?['number'];
 
-        // 1. Comparación de Monto (usando fixed(2) para asegurar precisión)
         final bool amountMatches = 
             (transactionAmount.toStringAsFixed(2) == extractedAmount.toStringAsFixed(2));
 
-        // // 2. Comparación de CUIL del Remitente (limpiando guiones)
-        // final bool cuilMatches = (payerCuil?.replaceAll('-', '') == extractedCuil);
+        final bool cuilMatches = (payerCuil?.replaceAll('-', '') == extractedCuil);
 
-        return amountMatches  ;
+        return amountMatches && cuilMatches;
       }).toList();
 
       if (matchingTransactions.isNotEmpty) {
