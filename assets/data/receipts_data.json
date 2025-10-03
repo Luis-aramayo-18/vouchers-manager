@@ -1,0 +1,156 @@
+[
+  {
+    "id": "REC001",
+    "fecha": "2025-09-17T10:30:00Z",
+    "monto": 150.5,
+    "cliente_id": "CLI001",
+    "cliente_name": "Juan Pérez",
+    "estado_de_pago": "Pagado",
+    "transaccion_id": "TRX12345",
+    "banco_entidad": "Banco A",
+    "cvu": "0000003100000000000000"
+  },
+  {
+    "id": "REC002",
+    "fecha": "2025-09-16T15:45:00Z",
+    "monto": 45.75,
+    "cliente_id": "CLI002",
+    "cliente_name": "María González",
+    "estado_de_pago": "Pendiente",
+    "transaccion_id": null,
+    "banco_entidad": "Banco B",
+    "cvu": "0000003200000000000000"
+  },
+  {
+    "id": "REC003",
+    "fecha": "2025-09-15T09:00:00Z",
+    "monto": 250.0,
+    "cliente_id": "CLI001",
+    "cliente_name": "Juan Pérez",
+    "estado_de_pago": "Pagado",
+    "transaccion_id": "TRX54321",
+    "banco_entidad": "Banco C",
+    "cvu": "0000003300000000000000"
+  },
+  {
+    "id": "REC004",
+    "fecha": "2025-09-14T12:00:00Z",
+    "monto": 89.99,
+    "cliente_id": "CLI003",
+    "cliente_name": "Carlos Rodríguez",
+    "estado_de_pago": "Pagado",
+    "transaccion_id": "TRX98765",
+    "banco_entidad": "Banco A",
+    "cvu": "0000003100000000000000"
+  },
+  {
+    "id": "REC005",
+    "fecha": "2025-09-13T18:20:00Z",
+    "monto": 300.0,
+    "cliente_id": "CLI004",
+    "cliente_name": "Laura Torres",
+    "estado_de_pago": "Pagado",
+    "transaccion_id": "TRX24680",
+    "banco_entidad": "Banco D",
+    "cvu": "0000003400000000000000"
+  },
+  {
+    "id": "REC006",
+    "fecha": "2025-09-12T11:10:00Z",
+    "monto": 75.0,
+    "cliente_id": "CLI005",
+    "cliente_name": "Sofía Giménez",
+    "estado_de_pago": "Pagado",
+    "transaccion_id": "TRX13579",
+    "banco_entidad": "Banco E",
+    "cvu": "0000003500000000000000"
+  },
+  {
+    "id": "REC007",
+    "fecha": "2025-09-11T14:35:00Z",
+    "monto": 120.5,
+    "cliente_id": "CLI006",
+    "cliente_name": "Martín Silva",
+    "estado_de_pago": "Pagado",
+    "transaccion_id": "TRX80246",
+    "banco_entidad": "Banco A",
+    "cvu": "0000003100000000000000"
+  },
+  {
+    "id": "REC008",
+    "fecha": "2025-09-10T08:55:00Z",
+    "monto": 60.0,
+    "cliente_id": "CLI007",
+    "cliente_name": "Valentina Díaz",
+    "estado_de_pago": "Pendiente",
+    "transaccion_id": null,
+    "banco_entidad": "Banco B",
+    "cvu": "0000003200000000000000"
+  },
+  {
+    "id": "REC009",
+    "fecha": "2025-09-09T17:00:00Z",
+    "monto": 450.25,
+    "cliente_id": "CLI008",
+    "cliente_name": "Diego Fernández",
+    "estado_de_pago": "Pagado",
+    "transaccion_id": "TRX97531",
+    "banco_entidad": "Banco F",
+    "cvu": "0000003600000000000000"
+  },
+  {
+    "id": "REC010",
+    "fecha": "2025-09-08T19:40:00Z",
+    "monto": 95.0,
+    "cliente_id": "CLI009",
+    "cliente_name": "Ana López",
+    "estado_de_pago": "Pagado",
+    "transaccion_id": "TRX86420",
+    "banco_entidad": "Banco A",
+    "cvu": "0000003100000000000000"
+  },
+  {
+    "id": "REC010",
+    "fecha": "2025-09-08T19:40:00Z",
+    "monto": 95.0,
+    "cliente_id": "CLI009",
+    "cliente_name": "Ana López",
+    "estado_de_pago": "Pagado",
+    "transaccion_id": "TRX86420",
+    "banco_entidad": "Banco A",
+    "cvu": "0000003100000000000000"
+  },
+  {
+    "id": "REC010",
+    "fecha": "2025-09-08T19:40:00Z",
+    "monto": 95.0,
+    "cliente_id": "CLI009",
+    "cliente_name": "Ana López",
+    "estado_de_pago": "Pagado",
+    "transaccion_id": "TRX86420",
+    "banco_entidad": "Banco A",
+    "cvu": "0000003100000000000000"
+  },
+  {
+    "id": "REC010",
+    "fecha": "2025-09-08T19:40:00Z",
+    "monto": 95.0,
+    "cliente_id": "CLI009",
+    "cliente_name": "Ana López",
+    "estado_de_pago": "Pagado",
+    "transaccion_id": "TRX86420",
+    "banco_entidad": "Banco A",
+    "cvu": "0000003100000000000000"
+  },
+  {
+    "id": "REC010",
+    "fecha": "2025-09-08T19:40:00Z",
+    "monto": 95.0,
+    "cliente_id": "CLI009",
+    "cliente_name": "Ana López",
+    "estado_de_pago": "Pagado",
+    "transaccion_id": "TRX86420",
+    "banco_entidad": "Banco A",
+    "cvu": "0000003100000000000000"
+  }
+]
