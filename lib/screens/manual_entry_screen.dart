@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+// 🌟 IMPORTANTE: Se asume que VerificationResult está definido aquí:
 import 'package:vouchers_manager/services/mercado_pago_service.dart';
 import 'dart:math' show pow;
 import 'dart:developer';
 
 import 'package:vouchers_manager/widgets/transfer_card.dart';
 import 'package:vouchers_manager/services/verification_database_service.dart';
+
+// La clase VerificationResult duplicada ha sido ELIMINADA de este archivo.
 
 // ====================================================================
 // CLASE AUXILIAR 1: Formato de CUIL
@@ -44,7 +47,7 @@ class CuilFormatter extends TextInputFormatter {
 }
 
 // ====================================================================
-// CLASE AUXILIAR 2: Formato de Monto con dos decimales
+// CLASE AUXILIAR 2: Formato de Monto con dos decimales (Sin cambios)
 // ====================================================================
 class CurrencyFormatter extends TextInputFormatter {
   final int decimalDigits;
@@ -61,11 +64,9 @@ class CurrencyFormatter extends TextInputFormatter {
       return newValue.copyWith(text: '');
     }
 
-    // Aseguramos que tengamos 2 decimales y el resto son enteros
     double value = int.parse(newText) / pow(10, decimalDigits);
     final String formatted = value.toStringAsFixed(decimalDigits);
 
-    // Retorna el valor formateado
     return TextEditingValue(
       text: formatted,
       selection: TextSelection.collapsed(offset: formatted.length),
@@ -84,8 +85,14 @@ class ManualEntryScreen extends StatefulWidget {
 }
 
 class _ManualEntryScreenState extends State<ManualEntryScreen> {
-  final MercadoPagoService _mpService = MercadoPagoService();
-  final VerificationDatabaseService _dbService = VerificationDatabaseService();
+  // Inicialización de Servicios
+  late final VerificationDatabaseService _dbService;
+  late final MercadoPagoService _mpService;
+
+  _ManualEntryScreenState() {
+    _dbService = VerificationDatabaseService();
+    _mpService = MercadoPagoService(_dbService);
+  }
 
   final _formKey = GlobalKey<FormState>();
 
@@ -95,13 +102,13 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
 
   bool _isLoading = false;
 
-  Map<String, dynamic>? _verificationResultDetails;
+  // 🌟 Se utiliza la VerificationResult importada (sin duplicado)
+  VerificationResult? _verificationResult;
 
   static const String _recipientCuil = '20379599738';
 
   @override
   void dispose() {
-    // Asegurarse de liberar el nuevo controlador
     _coelsaIdController.dispose();
     _cuilController.dispose();
     _amountController.dispose();
@@ -109,14 +116,17 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
   }
 
   void _submitForm() async {
-    // Limpiar resultados anteriores al iniciar una nueva verificación
+    // Limpiar resultados anteriores
     setState(() {
-      _verificationResultDetails = null;
+      _verificationResult = null;
     });
 
-    // Validamos que al menos un campo tenga datos, ya que eliminamos los validadores individuales.
+    // Validación de campos
     final bool hasCoelsaId = _coelsaIdController.text.trim().isNotEmpty;
-    final bool hasSenderCuil = _cuilController.text.trim().isNotEmpty;
+    final bool hasSenderCuil = _cuilController.text
+        .trim()
+        .replaceAll(RegExp(r'[^\d]'), '')
+        .isNotEmpty;
     final bool hasAmount = _amountController.text.trim().isNotEmpty;
 
     if (!hasCoelsaId && !hasSenderCuil && !hasAmount) {
@@ -133,24 +143,19 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
     }
 
     if (_formKey.currentState!.validate() || true) {
-      // El `|| true` está de más si quitamos validadores
       setState(() {
         _isLoading = true;
       });
 
-      // === Preparación de Parámetros Opcionales ===
-
-      // Coelsa ID: Si está vacío, se envía null.
+      // Preparación de Parámetros Opcionales
       final String? coelsaId = hasCoelsaId
           ? _coelsaIdController.text.trim()
           : null;
 
-      // CUIL: Si está vacío, se envía null. Se limpia de guiones antes de enviar.
       final String? senderCuil = hasSenderCuil
           ? _cuilController.text.replaceAll(RegExp(r'[^\d]'), '')
           : null;
 
-      // Monto: Si está vacío, se envía null. Se limpia y parsea.
       double? amount;
       if (hasAmount) {
         final String cleanedAmountText = _amountController.text.replaceAll(
@@ -158,16 +163,12 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
           '.',
         );
         amount = double.tryParse(cleanedAmountText);
-        // Si el parseo falla, el servicio de MP lo manejará como un criterio no válido,
-        // pero aquí nos aseguramos de que sea un double si existe.
       }
 
+      // 🌟 Esta llamada ahora devuelve el tipo de VerificationResult importado, ¡CORRECTO!
       final VerificationResult result = await _mpService.verifyTransaction(
-        // Si amount es null, se pasa null. Si se parseó correctamente, se pasa el valor.
         amount: amount,
-        // Si senderCuil es null, se pasa null. Si tiene valor, se pasa la cadena limpia.
         senderCuil: senderCuil,
-        // Si coelsaId es null, se pasa null.
         coelsaId: coelsaId,
         recipientCuil: _recipientCuil,
       );
@@ -177,10 +178,10 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
       setState(() {
         _isLoading = false;
 
-        if (result.isVerified && result.paymentDetails != null) {
-          _verificationResultDetails = result.paymentDetails;
+        if (result.isVerified) {
+          _verificationResult = result;
         } else {
-          _verificationResultDetails = null;
+          _verificationResult = null;
         }
       });
 
@@ -204,18 +205,21 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
     if (mpStatus == 'approved') {
       return TransferStatus.completed;
     }
-
     return TransferStatus.failed;
   }
 
+  // Función para guardar la transacción verificada
   void _handleSave() async {
     final Map<String, dynamic>? verificationDetails =
-        _verificationResultDetails;
+        _verificationResult?.paymentDetails;
 
-    if (verificationDetails == null) {
+    if (verificationDetails == null ||
+        (_verificationResult?.isDuplicate ?? true)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('No hay una verificación aprobada para guardar.'),
+          content: Text(
+            'Solo se pueden guardar transacciones APROBADAS y NO REGISTRADAS.',
+          ),
           backgroundColor: Colors.red,
         ),
       );
@@ -242,10 +246,34 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
         duration: const Duration(seconds: 4),
       ),
     );
+
+    // Una vez guardada, actualizamos el estado para reflejar el duplicado
+    if (message.startsWith('✅')) {
+      setState(() {
+        // 🌟 Se recrea el resultado marcándolo como duplicado (Guardado)
+        _verificationResult = VerificationResult(
+          isVerified: true,
+          isDuplicate: true,
+          message: 'Guardado y Registrado',
+          paymentDetails: verificationDetails,
+        );
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Obtenemos los detalles de la transacción si existen
+    final details = _verificationResult?.paymentDetails;
+    final isVerified = _verificationResult?.isVerified ?? false;
+    // 🌟 Variable que indica si el item está "Guardado"
+    final isDuplicate = _verificationResult?.isDuplicate ?? false;
+
+    // Decidimos si el botón de guardar debe estar visible (Verificado Y NO Duplicado)
+    final VoidCallback? onSaveCallback = isVerified && !isDuplicate
+        ? _handleSave
+        : null;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Carga Manual'),
@@ -265,11 +293,9 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // ------------------ CAMPO COELSA ID (NUEVO) ------------------
+                    // ------------------ CAMPO COELSA ID ------------------
                     TextFormField(
                       controller: _coelsaIdController,
-                      // Eliminamos maxLength para Coelsa ID ya que puede ser variable
-                      // Eliminamos inputFormatters y validator.
                       decoration: const InputDecoration(
                         labelText: 'Coelsa ID (Opcional)',
                         hintText: 'Ej: 2024100115304500012345MP',
@@ -279,7 +305,6 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
                         ),
                       ),
                       keyboardType: TextInputType.text,
-                      // ❌ Eliminamos el validator para hacerlo opcional.
                     ),
                     const SizedBox(height: 20),
 
@@ -300,7 +325,6 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
                         ),
                       ),
                       keyboardType: TextInputType.number,
-                      // ❌ Eliminamos el validator para hacerlo opcional.
                     ),
                     const SizedBox(height: 20),
 
@@ -313,7 +337,7 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
                       decoration: const InputDecoration(
                         labelText: 'Monto Transferido (Opcional)',
                         hintText: 'Ej: 1500.50 o 1500,50',
-                        prefixText: '\$', // Símbolo de moneda
+                        prefixText: '\$',
                         prefixStyle: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -322,7 +346,6 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
-                      // ❌ Eliminamos el validator para hacerlo opcional.
                     ),
                     const SizedBox(height: 30),
 
@@ -375,8 +398,8 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
               ),
               const SizedBox(height: 30),
 
-              // Renderizado Condicional de la Tarjeta
-              if (_verificationResultDetails != null)
+              // Renderizado Condicional de la Tarjeta (si hay detalles)
+              if (details != null)
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -384,32 +407,23 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
                     TransferCard(
                       // Mapeamos los campos extraídos de Mercado Pago a la TransferCard
                       status: _getTransferStatus(
-                        _verificationResultDetails!['extracted_status']
-                            as String,
+                        details['extracted_status'] as String,
                       ),
-                      // Se usa .toString() para evitar el error de casting si el valor es un double.
                       amount: double.parse(
-                        _verificationResultDetails!['extracted_amount']
-                            .toString(),
+                        details['extracted_amount'].toString(),
                       ),
-                      // 🌟 CAMBIO AQUÍ: Busca 'extracted_client_name' y si no existe, usa 'extracted_client_cuil'.
                       clientName:
-                          (_verificationResultDetails!['extracted_client_name'] ??
-                                  _verificationResultDetails!['extracted_client_cuil'])
+                          (details['extracted_client_name'] ??
+                                  details['extracted_client_cuil'])
                               .toString(),
-                      date:
-                          _verificationResultDetails!['extracted_date']
-                              as String,
-                      time:
-                          _verificationResultDetails!['extracted_time']
-                              as String,
-                      sourceBank:
-                          _verificationResultDetails!['extracted_source_bank']
-                              as String,
-                      onSave: _handleSave,
+                      date: details['extracted_date'] as String,
+                      time: details['extracted_time'] as String,
+                      sourceBank: details['extracted_source_bank'] as String,
+                      onSave: onSaveCallback,
+                      // 🌟 PROPIEDAD CLAVE: Usa el estado de duplicado para el badge "GUARDADO"
+                      isRegistered: isDuplicate,
                     ),
                     const SizedBox(height: 20),
-                    // Aquí podrías agregar más acciones o un botón para guardar
                   ],
                 ),
             ],

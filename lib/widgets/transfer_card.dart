@@ -12,10 +12,9 @@ class TransferCard extends StatelessWidget {
   final String clientName;
   final String date;
   final String time;
-  // 🌟 NUEVA PROPIEDAD: Banco de Origen
   final String sourceBank;
-  // 🌟 NUEVA PROPIEDAD: Función para guardar la transacción
-  final VoidCallback onSave;
+  final VoidCallback? onSave;
+  final bool isRegistered;
 
   const TransferCard({
     super.key,
@@ -24,8 +23,9 @@ class TransferCard extends StatelessWidget {
     required this.clientName,
     required this.date,
     required this.time,
-    required this.sourceBank, // Requiere el banco
-    required this.onSave, // Requiere la función de guardar
+    required this.sourceBank,
+    this.onSave,
+    this.isRegistered = false,
   });
 
   Color _getStatusColor(TransferStatus status) {
@@ -50,69 +50,89 @@ class TransferCard extends StatelessWidget {
     }
   }
 
-  // Método para formatear el monto a moneda
   String _formatAmount(double amount) {
+    // Usamos coma como separador decimal para contexto local
     return '\$ ${amount.toStringAsFixed(2).replaceAll('.', ',')}';
+  }
+
+  // Función auxiliar para el Badge
+  Widget _buildBadge(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 10,
+        vertical: 4,
+      ),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      alignment: Alignment.center, 
+      child: Text(
+        text,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final statusColor = _getStatusColor(status);
     final statusText = _getStatusText(status);
+    const Color savedColor = Colors.blue;
 
+    // 🌟 RE-INCORPORAMOS Card con elevación
     return Card(
       elevation: 6,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
-      // Reducimos el margen vertical para que se vea mejor junto a la etiqueta 'Banco de Origen'
-      margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 8), 
       child: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Sección Superior: Monto y Estado
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 // Monto
-                Text(
-                  _formatAmount(amount),
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).primaryColor,
+                Expanded(
+                  child: Text(
+                    _formatAmount(amount),
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).primaryColor,
+                    ),
                   ),
                 ),
-                // Estado (Badge)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    statusText,
-                    style: TextStyle(
-                      color: statusColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
+                
+                // Badges de estado y guardado
+                IntrinsicWidth( 
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch, 
+                    children: [
+                      // El badge "GUARDADO" SÍ se muestra si está registrado
+                      if (isRegistered)
+                        _buildBadge('GUARDADO', savedColor),
+                      
+                      if (isRegistered)
+                        const SizedBox(height: 8),
+                        
+                      _buildBadge(statusText, statusColor),
+                    ],
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 12),
 
-            // Separador sutil
             Divider(color: Colors.grey.shade200, height: 1),
             const SizedBox(height: 12),
 
-            // Sección Cliente y Banco (Información detallada)
             _buildDetailRow(
               context,
               label: 'Cliente',
@@ -120,7 +140,6 @@ class TransferCard extends StatelessWidget {
               icon: Icons.person_outline,
             ),
             const SizedBox(height: 12),
-            // 🌟 Mostrar el Banco de Origen
             _buildDetailRow(
               context,
               label: 'Banco de Origen',
@@ -129,10 +148,8 @@ class TransferCard extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
-            // Sección Inferior: Fecha y Hora
             Row(
               children: [
-                // Fecha
                 Icon(
                   Icons.calendar_today,
                   size: 16,
@@ -146,7 +163,6 @@ class TransferCard extends StatelessWidget {
 
                 const SizedBox(width: 20),
 
-                // Hora
                 Icon(
                   Icons.schedule,
                   size: 16,
@@ -156,32 +172,34 @@ class TransferCard extends StatelessWidget {
                 Text(
                   time,
                   style: TextStyle(color: Colors.grey.shade700),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
             const SizedBox(height: 20),
 
-            // 🌟 Botón de Guardar
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: onSave,
-                icon: const Icon(Icons.save_outlined),
-                label: const Text(
-                  'Guardar Verificación',
-                  style: TextStyle(fontSize: 16),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: statusColor, // Usa el color de estado (verde para completada)
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+            // 🌟 CAMBIO CLAVE: Botón Guardar solo si NO está registrado
+            if (!isRegistered)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: onSave, 
+                  icon: const Icon(Icons.save_outlined),
+                  label: const Text(
+                    'Guardar Verificación',
+                    style: TextStyle(fontSize: 16),
                   ),
-                  elevation: 4,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: onSave == null ? Colors.grey.shade400 : statusColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    elevation: 4,
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ),
@@ -213,6 +231,7 @@ class TransferCard extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
+                  color: Colors.black87, 
                 ),
                 overflow: TextOverflow.ellipsis,
                 maxLines: 2,

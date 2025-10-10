@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:developer';
 
 const String kVerifiedPaymentsTable = 'vouchers';
 
@@ -7,23 +8,30 @@ class VerificationDatabaseService {
 
   VerificationDatabaseService() : _supabase = Supabase.instance.client;
 
+  Future<bool> checkIfTransactionExists(String transactionId) async {
+    try {
+      final response = await _supabase
+          .from(kVerifiedPaymentsTable)
+          .select('mp_transaction_id')
+          .eq('mp_transaction_id', transactionId)
+          .limit(1);
+
+      return response.isNotEmpty;
+    } catch (e) {
+      log('Error al verificar duplicado en DB: $e');
+      return false;
+    }
+  }
+
+
   Future<String> saveVerification(Map<String, dynamic> details) async {
     final String transactionId = details['extracted_transaction_id'];
 
     if (transactionId == 'N/A') {
       return 'Error: No se puede guardar, la transacción no tiene un ID de Mercado Pago válido.';
     }
-
+    
     try {
-      final response = await _supabase
-          .from(kVerifiedPaymentsTable)
-          .select('mp_transaction_id')
-          .eq('mp_transaction_id', transactionId);
-
-      if (response.isNotEmpty) {
-        return '⚠️ Esta verificación (ID: $transactionId) ya fue guardada previamente.';
-      }
-
       final String recipientCuil =
           details['collector']?['identification']?['number'] ??
           'CUIL_Desconocido';
@@ -44,13 +52,13 @@ class VerificationDatabaseService {
 
       return '✅ Verificación guardada con éxito (ID: $transactionId).';
     } on PostgrestException catch (e) {
-      print('Supabase Error: ${e.message}');
+      log('Supabase Error al guardar: ${e.message}');
       if (e.message.contains('duplicate key value')) {
         return '⚠️ Error: Intento de duplicado de ID de transacción. El ID $transactionId ya existe.';
       }
       return '❌ Error al guardar en la base de datos: ${e.message}';
     } catch (e) {
-      print('Excepción al guardar: $e');
+      log('Excepción al guardar: $e');
       return '❌ Ocurrió un error inesperado al guardar.';
     }
   }

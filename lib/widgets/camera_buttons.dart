@@ -10,7 +10,7 @@ class CameraButtons extends StatelessWidget {
   final camera.FlashMode flashMode;
   final bool showGrid;
 
-  const CameraButtons({
+  const CameraButtons({super.key, 
     required this.onToggleFlash,
     required this.onToggleGrid,
     required this.onCloseCamera,

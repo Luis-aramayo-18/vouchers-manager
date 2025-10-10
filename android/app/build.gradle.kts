@@ -35,6 +35,17 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+            
+            // ✅ CORRECCIÓN CLAVE PARA R8/ProGuard (Sintaxis Kotlin DSL)
+            // Usamos 'isMinifyEnabled =' en lugar de 'minifyEnabled'
+            isMinifyEnabled = true
+            // Usamos 'isShrinkResources =' en lugar de 'shrinkResources'
+            isShrinkResources = true
+            // Usamos comillas dobles "" en lugar de comillas simples ''
+            proguardFiles(
+                getDefaultProguardFile("proguard-android.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 }

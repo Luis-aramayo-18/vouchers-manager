@@ -1,18 +1,23 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'dart:developer';
 
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:vouchers_manager/services/verification_database_service.dart';
 
 class VerificationResult {
   final bool isVerified;
   final String message;
+  final bool isDuplicate;
+
   final Map<String, dynamic>? paymentDetails;
 
   VerificationResult({
     required this.isVerified,
     required this.message,
     this.paymentDetails,
+    this.isDuplicate = false,
   });
 }
 
@@ -22,20 +27,19 @@ class MercadoPagoService {
   static const String _baseUrl =
       'https://api.mercadopago.com/v1/payments/search';
 
+  final VerificationDatabaseService _dbService;
+  MercadoPagoService(this._dbService);
+
   // ------------------------------------------------------------------
   // FUNCIÓN UTILITARIA: Formatea el CUIL/CUIT a XX-XXXXXXXX-X
   // ------------------------------------------------------------------
   String _formatCuil(String cuil) {
-    // 1. Limpiar todos los caracteres no numéricos
     final String cleanCuil = cuil.replaceAll(RegExp(r'[^\d]'), '');
 
-    // 2. Verificar que tenga 11 dígitos (formato estándar de CUIL/CUIT)
     if (cleanCuil.length != 11) {
-      // Devolver el valor original si no cumple el formato esperado
       return cuil;
     }
 
-    // 3. Aplicar el formato XX-XXXXXXXX-X
     final String prefix = cleanCuil.substring(0, 2);
     final String body = cleanCuil.substring(2, 10);
     final String suffix = cleanCuil.substring(10, 11);
@@ -61,16 +65,14 @@ class MercadoPagoService {
             '❌ Debes proporcionar al menos el Monto, el CUIL del Remitente o el Coelsa ID para realizar la búsqueda.',
       );
     }
-    // 1. Lógica de Rango de Fechas (Últimas 48 horas)
+
     final DateTime now = DateTime.now().toUtc();
     final DateTime fortyEightHoursAgo = now.subtract(const Duration(hours: 48));
 
-    // Formato ISO 8601 requerido por Mercado Pago
     final DateFormat isoFormatter = DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
     final String beginDate = isoFormatter.format(fortyEightHoursAgo);
     final String endDate = isoFormatter.format(now);
 
-    // 2. Construcción de la URL de la API
     String apiUrl =
         '$_baseUrl?begin_date=$beginDate&end_date=$endDate&collector.identification.number=$recipientCuil&sort=date_created&criteria=desc';
 
@@ -88,14 +90,12 @@ class MercadoPagoService {
         final Map<String, dynamic> responseBody = json.decode(response.body);
         final List<dynamic> results = responseBody['results'];
 
-        // 3. Filtrado LOCAL de Monto y CUIL del Remitente
         final matchingTransactions = results.where((payment) {
           final double transactionAmount = payment['transaction_amount']
               .toDouble();
           final String? payerCuil =
               payment['payer']['identification']?['number'];
 
-          // Limpiar guiones del CUIL del remitente para comparación
           final String cleanedSenderCuil = (senderCuil ?? '').replaceAll(
             '-',
             '',
@@ -117,9 +117,8 @@ class MercadoPagoService {
           return amountMatches && cuilMatches && isApproved;
         }).toList();
 
-        // 4. Devolución del Resultado
         if (matchingTransactions.isNotEmpty) {
-          final payment = matchingTransactions.first;
+          final Map<String, dynamic> payment = matchingTransactions.first; 
           
           final double foundAmount = payment['transaction_amount'].toDouble();
           final String foundStatus = payment['status'];
@@ -164,26 +163,43 @@ class MercadoPagoService {
           final String transactionId = payment['id'].toString();
           final String externalReference =
               payment['external_reference'] ?? 'N/A';
+
+          final bool isDuplicate = await _dbService.checkIfTransactionExists(
+            transactionId,
+          );
+          
+          final Map<String, dynamic> paymentDetails = {
+            ...payment,
+            'extracted_status': foundStatus,
+            'extracted_amount': foundAmount,
+            'extracted_client_cuil': clientIdentifierFormatted,
+            'extracted_client_name': clientName,
+            'extracted_date': formattedDate,
+            'extracted_time': formattedTime,
+            'extracted_transaction_id': transactionId,
+            'extracted_external_reference': externalReference,
+            'extracted_source_bank': sourceBank,
+          };
+
           final String idDisplay = coelsaId != null
               ? 'Coelsa ID: $externalReference'
               : 'ID MP: $transactionId';
 
+          if (isDuplicate) {
+            log('Transacción $transactionId es duplicada.');
+            return VerificationResult(
+              isVerified: true,
+              isDuplicate: true,
+              message: '⚠️ Transferencia APROBADA y REGISTRADA.\n$idDisplay',
+              paymentDetails: paymentDetails,
+            );
+          }
+
           return VerificationResult(
             isVerified: true,
-            message: "Transferencia APROBADA\n$idDisplay",
-            paymentDetails: {
-              ...payment,
-              'extracted_status': foundStatus,
-              'extracted_amount': foundAmount,
-              'extracted_client_cuil':
-                  clientIdentifierFormatted, // Usamos el CUIL formateado
-              'extracted_client_name': clientName,
-              'extracted_date': formattedDate,
-              'extracted_time': formattedTime,
-              'extracted_transaction_id': transactionId,
-              'extracted_external_reference': externalReference,
-              'extracted_source_bank': sourceBank,
-            },
+            isDuplicate: false,
+            message: "Transferencia APROBADA y NO REGISTRADA\n$idDisplay",
+            paymentDetails: paymentDetails,
           );
         } else {
           return VerificationResult(
@@ -200,7 +216,7 @@ class MercadoPagoService {
         );
       }
     } catch (e) {
-      print('Excepción durante la verificación: $e');
+      log('Excepción durante la verificación: $e');
       return VerificationResult(
         isVerified: false,
         message: 'Ocurrió una excepción durante la verificación: $e',

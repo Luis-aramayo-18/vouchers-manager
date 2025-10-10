@@ -1,17 +1,13 @@
-# Reglas necesarias para Google ML Kit Text Recognition.
-# Estas reglas aseguran que los idiomas de reconocimiento que no estás
-# usando directamente (como chino, japonés, etc.) no sean eliminados
-# por R8/ProGuard.
+# Reglas necesarias para evitar que R8 elimine las clases de ML Kit
+# que son referenciadas internamente por el plugin google_mlkit_text_recognition.
 
-# Mantener todos los módulos de idiomas de reconocimiento de texto
-# aunque no se inicialicen explícitamente en Dart.
--keep class com.google.mlkit.vision.text.** { *; }
-
-# Mantener las opciones específicas de reconocimiento de idiomas
+# Mantener las opciones de los reconocedores de texto que R8 reportó como faltantes
 -keep class com.google.mlkit.vision.text.chinese.** { *; }
 -keep class com.google.mlkit.vision.text.devanagari.** { *; }
 -keep class com.google.mlkit.vision.text.japanese.** { *; }
 -keep class com.google.mlkit.vision.text.korean.** { *; }
 
-# Mantener las clases base del TextRecognizer
--keep class com.google.mlkit.vision.text.TextRecognizer { *; }
+# Regla general recomendada para todas las dependencias de ML Kit
+-keep class com.google.mlkit.** { *; }
+-keep class com.google.firebase.ml.** { *; }
+-keep class com.google.mlkit.vision.** { *; }
