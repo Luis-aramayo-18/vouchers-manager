@@ -12,62 +12,78 @@ class MainContentBody extends StatefulWidget {
   State<MainContentBody> createState() => _MainContentBodyState();
 }
 
-class _MainContentBodyState extends State<MainContentBody> {
-  // Lista que contendrá los recibos cargados (incrementalmente)
-  List<dynamic> _receipts = [];
+class _MainContentBodyState extends State<MainContentBody> with RouteAware {
+  final List<dynamic> _receipts = [];
 
-  // Filtro de fecha seleccionado por el usuario
   DateTime? _selectedDate;
 
-  // 🌟 ESTADO PARA EL TOTAL MENSUAL
   double? _monthlyTotal;
-  String _currentMonthYear = ''; // Ej: "Octubre 2025"
-  DateTime _currentTotalDate = DateTime.now(); // La fecha usada para el cálculo
+  String _currentMonthYear = '';
 
-  // Variables de Paginación del lado del servidor
   final int _pageSize = 10;
+
   int _currentPage = 0;
   bool _isLoading = false;
-  bool _hasMore = true; // Indica si hay más items para cargar del servidor
+  bool _hasMore = true;
+
+  // Bandera para asegurar que la carga inicial solo ocurra una vez en initState
+  bool _isInitialLoad = true;
 
   @override
   void initState() {
     super.initState();
-    // Inicializar el mes y año actual
     _updateCurrentMonthYear(DateTime.now());
-    // Cargamos la primera página al iniciar.
     _loadReceipts();
-    // Cargamos el total del mes actual al iniciar (solo para inicializar el botón)
     _loadMonthlyTotal(DateTime.now(), initializeButton: true);
   }
 
-  // -----------------------------------------------------------
-  // LÓGICA DE CÁLCULO DE TOTALES
-  // -----------------------------------------------------------
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    
+    // Si no es la carga inicial, forzamos la recarga al volver a la pantalla
+    if (!_isInitialLoad) {
+      final Route? route = ModalRoute.of(context);
+      
+      if (route?.isCurrent == true) {
+        // Recargamos la lista y el total cuando la pantalla se vuelve activa
+        _loadReceipts(reset: true);
+        _loadMonthlyTotal(DateTime.now(), initializeButton: true);
+      }
+    }
+    
+    _isInitialLoad = false;
+  }
 
-  // Actualiza el texto del botón al mes y año seleccionado
+  @override
+  void dispose() {
+    // Si usaras RouteObserver (que es la forma más robusta)
+    // RouteObserver.of(context).unsubscribe(this);
+    super.dispose();
+  }
+
+  // -----------------------------------------------------------
+  // LÓGICA DE CÁLCULO DE TOTALES 
+  // -----------------------------------------------------------
   void _updateCurrentMonthYear(DateTime date) {
     setState(() {
-      // Usamos getDateFormat porque esta es para la fecha (ej: "Octubre 2025")
       final formatter = data_service.getDateFormat('MMMM yyyy');
       _currentMonthYear = formatter.format(date);
-      _currentTotalDate = date; // Guardamos la fecha para el cálculo
     });
   }
 
-  // Carga el total y la cantidad de comprobantes para un mes específico
   Future<void> _loadMonthlyTotal(DateTime date, {bool initializeButton = false}) async {
     try {
-      // ⚠️ Llamada al servicio que devuelve un mapa con el monto y la cantidad.
       final Map<String, dynamic> result = await data_service.calculateMonthlyTotal(date);
 
-      _updateCurrentMonthYear(date); // Actualiza el botón con el mes seleccionado
+      if (!mounted) return;
+
+      _updateCurrentMonthYear(date);
 
       setState(() {
         _monthlyTotal = result['total_amount'];
       });
 
-      // SOLO mostramos el modal si NO estamos en la inicialización (solo cuando el usuario presiona OK)
       if (!initializeButton) {
         _showTotalModal(
           total: result['total_amount'],
@@ -76,12 +92,15 @@ class _MainContentBodyState extends State<MainContentBody> {
         );
       }
     } catch (e) {
-      print('Error al cargar el total mensual: $e');
+      debugPrint('Error al cargar el total mensual: $e');
+      
+      if (!mounted) return; 
+
       setState(() {
         _monthlyTotal = 0.0;
       });
+
       if (!initializeButton) {
-        // Muestra una alerta en caso de error de cálculo/conexión
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Error al obtener los totales del mes.'),
@@ -92,30 +111,25 @@ class _MainContentBodyState extends State<MainContentBody> {
     }
   }
 
-  // Lógica que se ejecuta al presionar el botón de total
   void _onMonthlyTotalPressed() async {
-    // 1. Mostrar el selector de mes personalizado
     final SelectedMonth? selected = await showDialog<SelectedMonth>(
       context: context,
-      builder: (context) => const MonthPickerModal(), // 🌟 Usando la clase renombrada
+      builder: (context) => const MonthPickerModal(),
     );
 
-    // 2. Si se seleccionó un mes (el usuario presionó OK)
     if (selected != null) {
-      // Llamamos a cargar el total para la fecha seleccionada
       _loadMonthlyTotal(selected.date);
     }
   }
 
   // -----------------------------------------------------------
-  // WIDGET MODAL DE RESULTADOS
+  // WIDGET MODAL DE RESULTADOS (Sin cambios)
   // -----------------------------------------------------------
 
   void _showTotalModal({required double total, required int count, required String monthYear}) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        // 🟢 LÍNEA CORREGIDA: Se usa getNumberFormat para formatear el 'double' (monto total)
         final String formattedTotal = data_service.getNumberFormat('###,##0.00').format(total);
 
         return AlertDialog(
@@ -197,11 +211,70 @@ class _MainContentBodyState extends State<MainContentBody> {
   }
 
   // -----------------------------------------------------------
-  // LÓGICA DE CARGA Y PAGINACIÓN (Sin cambios)
+  // FUNCIÓN DE DATEPICKER CON TEMA (Sin cambios)
   // -----------------------------------------------------------
 
+  Future<DateTime?> _showThemeDatePicker({
+    required BuildContext context,
+    required DateTime initialDate,
+    required DateTime firstDate,
+    required DateTime lastDate,
+  }) {
+    const Color primaryColor = Colors.blue; 
+
+    return showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: firstDate,
+      lastDate: lastDate,
+      builder: (BuildContext context, Widget? child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: primaryColor,  
+              onPrimary: Colors.white, 
+              surface: Colors.white,    
+              onSurface: Colors.black87, 
+            ),
+            // --- Estilos de Botones de acción (OK, Cancelar) ---
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: primaryColor,
+              ),
+            ),
+            datePickerTheme: DatePickerThemeData(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15), 
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+  }
+
+
+  // -----------------------------------------------------------
+  // LÓGICA DE CARGA Y PAGINACIÓN (Sin cambios funcionales)
+  // -----------------------------------------------------------
+
+  // 🚀 Implementamos la lógica de refresco:
+  Future<void> _handleRefresh() async {
+    // 1. Recarga los recibos (reseteando la paginación)
+    await _loadReceipts(reset: true);
+    
+    // 2. Recarga el total mensual (para la fecha actual)
+    await _loadMonthlyTotal(DateTime.now(), initializeButton: true);
+
+    // El Future se completa cuando ambas cargas terminan.
+  }
+
   Future<void> _loadReceipts({bool reset = false}) async {
-    if (_isLoading || (!_hasMore && !reset)) return;
+    // Si ya estamos cargando y no estamos reseteando, salimos.
+    if (_isLoading && !reset) return; 
+    // Si no hay más datos y no estamos reseteando, salimos.
+    if (!_hasMore && !reset) return;
 
     if (reset) {
       setState(() {
@@ -216,6 +289,7 @@ class _MainContentBodyState extends State<MainContentBody> {
       });
     }
 
+    // Se calcula la paginación según el estado actual
     final int from = _currentPage * _pageSize;
     final int to = from + _pageSize - 1;
 
@@ -226,6 +300,9 @@ class _MainContentBodyState extends State<MainContentBody> {
         dateFilter: _selectedDate,
       );
 
+      // Si el widget ya no está montado, salimos.
+      if (!mounted) return;
+
       setState(() {
         _receipts.addAll(newReceipts);
         _hasMore = newReceipts.length == _pageSize;
@@ -233,7 +310,8 @@ class _MainContentBodyState extends State<MainContentBody> {
         _isLoading = false;
       });
     } catch (e) {
-      print('Error al cargar recibos: $e');
+      debugPrint('Error al cargar recibos: $e');
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
         _hasMore = false;
@@ -252,35 +330,33 @@ class _MainContentBodyState extends State<MainContentBody> {
     _loadReceipts(reset: true);
   }
 
+
   // -----------------------------------------------------------
-  // WIDGET BUILDER CORREGIDO (Los botones están en Column ahora)
+  // WIDGET BUILDER
   // -----------------------------------------------------------
   @override
   Widget build(BuildContext context) {
-    // Calculamos el ancho completo (ancho de pantalla menos el padding horizontal de 16.0*2)
     final double fullButtonWidth = MediaQuery.of(context).size.width - 32.0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 0. BOTONES SUPERIORES (TOTAL MENSUAL Y FILTRO DE FECHA)
         Padding(
-          padding: const EdgeInsets.only(top: 60.0, bottom: 10.0, left: 16.0, right: 16.0),
-          // ⚠️ CAMBIO CLAVE: Column para apilar los botones verticalmente
+          padding: const EdgeInsets.only(top: 30.0, bottom: 10.0, left: 16.0, right: 16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // 🌟 1. BOTÓN DE TOTAL MENSUAL (ARRIBA)
               SizedBox(
-                width: fullButtonWidth, // Ancho completo
+                width: fullButtonWidth,
                 child: MonthlyTotalButton(
                   currentMonthYear: _currentMonthYear,
-                  totalAmount: _monthlyTotal, // Pasamos el total calculado
-                  onPressed: _onMonthlyTotalPressed, // La acción al presionar
+                  totalAmount: _monthlyTotal,
+                  onPressed: _onMonthlyTotalPressed,
                 ),
               ),
               
-              const SizedBox(height: 10), // Espacio entre botones
+              const SizedBox(height: 10),
 
               // 2. Botón de Filtro de Fecha (ABAJO)
               SizedBox(
@@ -288,7 +364,7 @@ class _MainContentBodyState extends State<MainContentBody> {
                 child: DateFilterButton(
                   selectedDate: _selectedDate,
                   onPressed: () async {
-                    final DateTime? pickedDate = await showDatePicker(
+                    final DateTime? pickedDate = await _showThemeDatePicker( 
                       context: context,
                       initialDate: _selectedDate ?? DateTime.now(),
                       firstDate: DateTime(2020),
@@ -311,43 +387,54 @@ class _MainContentBodyState extends State<MainContentBody> {
         if (_isLoading && _receipts.isEmpty)
           const Expanded(child: Center(child: CircularProgressIndicator())),
 
-        // 3. Lista de Recibos
+        // 3. Lista de Recibos envuelta en RefreshIndicator
         if (!_isLoading || _receipts.isNotEmpty)
           Expanded(
-            child: ListView.builder(
-              padding: EdgeInsets.zero,
-              shrinkWrap: true,
-              itemCount: _receipts.length,
-              itemBuilder: (context, index) {
-                final receipt = _receipts[index];
-                return ReceiptItem(receipt: receipt);
-              },
-            ),
-          ),
-
-        // 4. Botón "Ver más" / Indicador de carga de más
-        if (_hasMore || (_isLoading && _receipts.isNotEmpty))
-          Padding(
-            padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 10.0, bottom: 60.0),
-            child: Center(
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _loadMore,
-                style: ElevatedButton.styleFrom(
-                  foregroundColor: Colors.black,
-                  backgroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
-                ),
-                child: _isLoading && _receipts.isNotEmpty
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Ver más'),
+            // 💡 APLICACIÓN DEL PULL-TO-REFRESH
+            child: RefreshIndicator(
+              onRefresh: _handleRefresh, // Llama a la nueva función de recarga
+              color: Colors.blue, // Color del indicador de progreso
+              child: ListView.builder(
+                // Establecemos physics para que el indicador de refresco funcione siempre, 
+                // incluso si la lista no es lo suficientemente larga para ser scrollable.
+                physics: const AlwaysScrollableScrollPhysics(), 
+                padding: EdgeInsets.zero,
+                shrinkWrap: true,
+                itemCount: _receipts.length + (_hasMore ? 1 : 0),
+                itemBuilder: (context, index) {
+                  if (index == _receipts.length) {
+                    if (_isLoading) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 32.0),
+                          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                        );
+                    } else if (_hasMore) {
+                        return Padding(
+                          padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 10.0, bottom: 60.0),
+                          child: Center(
+                              child: ElevatedButton(
+                                  onPressed: _loadMore,
+                                  style: ElevatedButton.styleFrom(
+                                      foregroundColor: Colors.black,
+                                      backgroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
+                                  ),
+                                  child: const Text('Ver más'),
+                              ),
+                          ),
+                        );
+                    }
+                    return const SizedBox.shrink();
+                  }
+                  
+                  final receipt = _receipts[index];
+                  return ReceiptItem(receipt: receipt);
+                },
               ),
             ),
           ),
-        // 5. Mensaje si no hay recibos
+
+        // 4. Mensaje si no hay recibos (Asegurarse de que no haya un cargador visible)
         if (!_isLoading && _receipts.isEmpty)
           const Expanded(
             child: Center(child: Text('No hay recibos disponibles con este criterio.')),

@@ -16,7 +16,8 @@ class CloseCameraButton extends StatelessWidget {
       left: 10.0,
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.5),
+          // 🎯 CORRECCIÓN: Reemplazamos withOpacity(0.5) por withAlpha(128)
+          color: Colors.black.withAlpha(128),
           shape: BoxShape.circle,
         ),
         child: IconButton(

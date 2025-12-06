@@ -43,10 +43,9 @@ class ReceiptItem extends StatelessWidget {
   }
 
   void _showDetailsModal(BuildContext context) {
-    // --- Lógica de extracción de datos (para Modal) ---
-    final String dateString = receipt['created_at'] as String? ?? '';
+    final String dateString = receipt['date_approved_local'] as String? ?? '';
     final DateTime dateTime = (dateString.isNotEmpty)
-        ? DateTime.parse(dateString).toLocal()
+        ? DateTime.parse(dateString)
         : DateTime.now();
 
     final TransferStatus transferStatus = _mapStatus(
@@ -54,7 +53,6 @@ class ReceiptItem extends StatelessWidget {
     final double amount = (receipt['amount'] as num?)?.toDouble() ?? 0.00;
     final String clientName = receipt['sender_name'] as String? ?? 'Cliente Desconocido';
     final String sourceBank = receipt['full_data']['source_bank'] as String? ?? 'Banco Desconocido';
-    final bool isRegistered = receipt['is_registered'] as bool? ?? false; 
     
     final String dateFormatted = "${dateTime.day.toString().padLeft(2, '0')}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.year}";
     final String timeFormatted = "${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}";
@@ -63,16 +61,12 @@ class ReceiptItem extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      // Establecemos el fondo como blanco (o el color que use tu modal)
-
       builder: (ctx) {
         return Padding(
           padding: EdgeInsets.only(
             bottom: MediaQuery.of(ctx).viewInsets.bottom,
           ),
-          // CLAVE: Usamos ÚNICAMENTE TransferDetailsModalView
           child: TransferDetailsModalView(
-              // Widget de SOLO LECTURA (sin botón de guardar)
               status: transferStatus,
               amount: amount,
               clientName: clientName,
@@ -88,7 +82,7 @@ class ReceiptItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // --- Lógica de extracción de datos (para List Item) ---
-    final String dateString = receipt['created_at'] as String? ?? '';
+    final String dateString = receipt['date_approved_local'] as String? ?? '';
     final DateTime dateTime = (dateString.isNotEmpty)
         ? DateTime.parse(dateString).toLocal()
         : DateTime.now();

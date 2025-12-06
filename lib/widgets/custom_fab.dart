@@ -20,7 +20,8 @@ class CustomFAB extends StatelessWidget {
           borderRadius: BorderRadius.circular(15),
           boxShadow: [
             BoxShadow(
-              color: Colors.blue.withOpacity(0.3),
+              // 🎯 CORRECCIÓN: Reemplazamos withOpacity(0.3) por withAlpha(77)
+              color: Colors.blue.withAlpha(77), // 77 es aproximadamente el 30% de 255
               spreadRadius: 2,
               blurRadius: 5,
               offset: const Offset(0, 3),

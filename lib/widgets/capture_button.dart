@@ -20,7 +20,7 @@ class CaptureButton extends StatelessWidget {
           child: Container(
             width: 70,
             height: 70,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration( // Se agregó 'const'
               color: Colors.white,
               shape: BoxShape.circle,
             ),
@@ -33,7 +33,8 @@ class CaptureButton extends StatelessWidget {
               ),
               child: Icon(
                 Icons.circle,
-                color: Colors.black.withOpacity(0.8),
+                // 🎯 CORRECCIÓN: Reemplazamos withOpacity(0.8) por withAlpha(204)
+                color: Colors.black.withAlpha(204), // 204 es el 80% de 255
                 size: 50,
               ),
             ),

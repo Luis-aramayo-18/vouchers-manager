@@ -22,6 +22,10 @@ dependencies:
   flutter_dotenv: ^6.0.0
   supabase_flutter: ^2.10.2
   postgrest: ^2.5.0
+  qr_flutter: ^4.1.0
+  url_launcher: ^6.3.2
+  uni_links: ^0.5.1 
+  provider: ^6.1.1 
 
 dev_dependencies:
   flutter_test:
@@ -33,4 +37,4 @@ flutter:
   assets:
     - assets/data/receipts_data.json
     - .env
-
+    - assets/images/

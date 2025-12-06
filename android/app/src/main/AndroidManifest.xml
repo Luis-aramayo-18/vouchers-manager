@@ -12,13 +12,53 @@
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
+
             <meta-data
-              android:name="io.flutter.embedding.android.NormalTheme"
-              android:resource="@style/NormalTheme"
-              />
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/NormalTheme"
+            />
+
+            <!-- Filtro de lanzamiento principal -->
             <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.LAUNCHER"/>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- Filtro existente para el login de Supabase
+            (io.supabase.flutterquickstart://login-callback) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="io.supabase.flutterquickstart"
+                    android:host="login-callback" />
+            </intent-filter>
+
+            <!-- Filtro para el callback de Mercado Pago (vouchers://mp_auth) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="vouchers"
+                    android:host="mp_auth" />
+            </intent-filter>
+
+            <!-- Dentro de la etiqueta <activity> que tiene el flutter_embedding -->
+            <intent-filter>
+                <!-- Esto le dice al SO que la app maneja este tipo de enlaces -->
+                <action android:name="android.intent.action.VIEW" />
+
+                <!-- Categorías estándar para que el navegador sepa cómo manejar el enlace -->
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <!-- ¡CRÍTICO! Define tu esquema (ej. "vouchersmanager") y el host
+                ("login-callback") -->
+                <data
+                    android:scheme="vouchersmanager"
+                    android:host="login-callback" />
             </intent-filter>
         </activity>
 
@@ -26,12 +66,33 @@
             android:name="flutterEmbedding"
             android:value="2" />
     </application>
+
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+
     <queries>
+        <!-- Estaba: -->
+        <!-- <intent>
+            <action android:name="android.intent.action.PROCESS_TEXT" />
+            <data android:mimeType="text/plain" />
+        </intent> -->
+
+        <!-- AGREGADO: Esto es lo que faltaba para que `url_launcher` funcione y abra el navegador
+        (Mercado Pago usa HTTPS) -->
         <intent>
-            <action android:name="android.intent.action.PROCESS_TEXT"/>
-            <data android:mimeType="text/plain"/>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="http" />
+        </intent>
+
+        <intent>
+            <action android:name="android.intent.action.PROCESS_TEXT" />
+            <data android:mimeType="text/plain" />
         </intent>
     </queries>
+
 </manifest>

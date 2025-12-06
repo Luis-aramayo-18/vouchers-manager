@@ -1,7 +1,5 @@
 import 'package:intl/intl.dart';
-// 1. Alias para la librería principal de Supabase
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase_lib;
-// 2. Alias para la librería PostgREST (contiene CountMethod)
 import 'package:postgrest/postgrest.dart' as postgrest;
 
 // -----------------------------------------------------------------------------
@@ -10,7 +8,7 @@ import 'package:postgrest/postgrest.dart' as postgrest;
 final supabase = supabase_lib.Supabase.instance.client;
 const String _tableName = 'vouchers';
 const String _amountColumn = 'amount';
-const String _dateColumn = 'created_at';
+const String _dateColumn = 'date_approved_local';
 const int _pageSize = 10;
 
 // -----------------------------------------------------------------------------
@@ -57,14 +55,8 @@ Future<List<dynamic>> _executeSupabaseQuery({
 
     return data as List<dynamic>;
   } on postgrest.PostgrestException catch (e) {
-    // Usamos el alias 'postgrest'
-    print('--- ERROR SUPABASE POSTGREST ---');
-    print('Mensaje: ${e.message}');
-    print('Detalles: ${e.details}');
-    print('---------------------------------');
     throw Exception('Error PostgREST: ${e.message}');
   } catch (e) {
-    print('Error inesperado al ejecutar consulta: $e');
     throw Exception('Error inesperado: $e');
   }
 }
@@ -89,7 +81,6 @@ Future<Map<String, dynamic>> calculateMonthlyTotal(DateTime date) async {
         .select(_amountColumn)
         .gte(_dateColumn, startOfMonth.toIso8601String())
         .lte(_dateColumn, endOfMonth.toIso8601String());
-    // ✅ LÍNEA CLAVE: Usamos el alias 'postgrest' con CountMethod.
 
     final List<dynamic> data = totalQuery as List<dynamic>;
     final int receiptCount = data.length;
