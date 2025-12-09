@@ -45,16 +45,13 @@ class _MercadoPagoSyncScreenState extends State<MercadoPagoSyncScreen> {
   void _handleLinkStatusChange() {
     if (_mpSyncProvider.isAccountLinked && _mpSyncProvider.linkSuccessData != null && mounted) {
       widget.onLinkSuccess();
-    }
-    // Manejo de errores
-    else if (_mpSyncProvider.linkError != null && mounted) {
+    } else if (_mpSyncProvider.linkError != null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(_mpSyncProvider.linkError!), backgroundColor: Colors.red),
       );
     }
   }
 
-  // Se mantiene el argumento BuildContext porque la función no es asíncrona.
   void _navigateToVerificationScreen(BuildContext context, String snackBarMessage) {
     if (context.mounted) {
       Navigator.of(
@@ -67,7 +64,6 @@ class _MercadoPagoSyncScreenState extends State<MercadoPagoSyncScreen> {
     }
   }
 
-  // ** FIX 1: Removido el argumento 'context' **
   void _launchInAppBinding() async {
     final provider = _mpSyncProvider;
 
@@ -151,11 +147,6 @@ class _MercadoPagoSyncScreenState extends State<MercadoPagoSyncScreen> {
   Widget build(BuildContext context) {
     final provider = Provider.of<MpSyncProvider>(context);
 
-    // Manejo de errores en la UI principal
-    if (provider.linkError != null) {
-      // El listener ya maneja mostrar el SnackBar.
-    }
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Vincular Mercado Pago'),
@@ -186,7 +177,6 @@ class _MercadoPagoSyncScreenState extends State<MercadoPagoSyncScreen> {
                 ElevatedButton.icon(
                   icon: Image.asset('assets/images/mercado-pago-logo.png', height: 34),
                   label: const Text('Vincular en un dispositivo tercero'),
-                  // ** FIX 3: Llamada sin argumento context **
                   onPressed: _showQrModal,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF0085ca),
@@ -203,7 +193,6 @@ class _MercadoPagoSyncScreenState extends State<MercadoPagoSyncScreen> {
                 ElevatedButton.icon(
                   icon: Image.asset('assets/images/mercado-pago-logo.png', height: 34),
                   label: const Text('Vincular en este dispositivo'),
-                  // ** FIX 4: Llamada sin argumento context **
                   onPressed: _launchInAppBinding,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFFFE600),
@@ -215,7 +204,6 @@ class _MercadoPagoSyncScreenState extends State<MercadoPagoSyncScreen> {
                   ),
                 ),
 
-                // Muestra un indicador de progreso si el linkeo está en proceso
                 if (provider.isProcessingLink)
                   const Padding(
                     padding: EdgeInsets.only(top: 20),

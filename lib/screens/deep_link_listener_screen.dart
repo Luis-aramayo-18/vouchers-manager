@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart'; 
-import 'package:uni_links/uni_links.dart';
+// ¡IMPORTANTE! Reemplazamos uni_links por app_links
+import 'package:app_links/app_links.dart'; 
 import 'package:flutter/services.dart';
 import 'package:camera/camera.dart' as camera;
 
@@ -22,6 +23,8 @@ class DeepLinkListenerScreen extends StatefulWidget {
 }
 
 class _DeepLinkListenerScreenState extends State<DeepLinkListenerScreen> {
+  // Instancia del nuevo paquete AppLinks
+  final _appLinks = AppLinks(); 
   StreamSubscription? _sub;
   bool _initialCheckDone = false;
   late MpSyncProvider _mpSyncProvider;
@@ -29,14 +32,12 @@ class _DeepLinkListenerScreenState extends State<DeepLinkListenerScreen> {
   @override
   void initState() {
     super.initState();
-    // LOG 1: Confirmación de que el listener es el primer widget en iniciar.
     debugPrint('➡️ DeepLinkListener: START - Inicializando el estado.'); 
     
-    // Configuración del Provider
+    // El Provider.of debe hacerse en initState con listen: false
     _mpSyncProvider = Provider.of<MpSyncProvider>(context, listen: false);
     
-    // Inicia el proceso de escucha de Deep Links.
-    _initUniLinks();
+    _initDeepLinks(); // Renombramos el método para reflejar el nuevo paquete
   }
 
   @override
@@ -50,32 +51,32 @@ class _DeepLinkListenerScreenState extends State<DeepLinkListenerScreen> {
     if (mounted) {
       setState(() {
         _initialCheckDone = true;
-        // LOG 2: La verificación inicial ha terminado, se procede a mostrar el 'child'.
         debugPrint('✅ DeepLinkListener: INITIAL CHECK DONE. Mostrando el widget hijo (AuthCheckScreen).');
       });
     }
   }
 
-  Future<void> _initUniLinks() async {
-    String? link;
+  // Actualizamos el método para usar la API de app_links
+  Future<void> _initDeepLinks() async {
+    Uri? uri;
     
-    // --- Lógica para Deep Link Inicial (App Abierta por Enlace) ---
     debugPrint('⏳ DeepLinkListener: Verificando si la app fue abierta por un enlace inicial...');
     try {
-      link = await getInitialLink();
+      // 1. Uso de getInitialLink() de app_links (devuelve un Uri)
+      uri = await _appLinks.getInitialLink();
     } on PlatformException catch (e) {
       debugPrint('❌ DeepLinkListener: Error al obtener Deep Link inicial: ${e.message}');
     } catch (e) {
       debugPrint('❌ DeepLinkListener: Error inesperado al obtener Deep Link: $e');
     }
 
-    await _handleLink(link);
+    // Pasamos el URI directamente al manejador
+    await _handleLink(uri?.toString());
 
-    // --- Lógica para Stream de Deep Links (App ya en Ejecución) ---
     debugPrint('⏳ DeepLinkListener: Configurando el Stream Listener para futuros enlaces.');
-    _sub = uriLinkStream.listen((Uri? uri) async {
+    // 2. Uso de uriLinkStream de app_links (devuelve un Stream<Uri>)
+    _sub = _appLinks.uriLinkStream.listen((Uri? uri) async {
       if (!mounted) return;
-      // LOG 3: Deep Link recibido mientras la app estaba abierta.
       debugPrint('🔔 DeepLinkListener: Deep Link recibido desde el Stream: ${uri.toString()}');
       await _handleLink(uri?.toString());
     }, onError: (err) {
@@ -94,21 +95,19 @@ class _DeepLinkListenerScreenState extends State<DeepLinkListenerScreen> {
     }
 
     debugPrint('Deep Link Handler: Procesando enlace: $link');
+    // Si el link no viene como Uri, lo parseamos
     final uri = Uri.parse(link);
 
     final status = uri.queryParameters['status']; 
     final mpUserId = uri.queryParameters['mp_user_id']; 
 
-    // --- LÓGICA CLAVE: PROCESAR CALLBACK EXITOSO DE SUPABASE ---
     if (status == 'success' && mpUserId != null) {
       debugPrint('💰 Deep Link Handler: Callback de Supabase detectado. Status: SUCCESS. User ID: $mpUserId');
       
       await _mpSyncProvider.markAccountAsLinked(mpUserId);
       
-      // NOTA: Se asume que la navegación a /main_app ocurre en el MpSyncProvider
-      // o en AuthCheckScreen después de verificar el estado de vinculación actualizado.
-
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        // En un ambiente real, considerar usar un modal en lugar de SnackBar
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Vinculación de Mercado Pago completada con éxito.')),
         );
@@ -116,13 +115,13 @@ class _DeepLinkListenerScreenState extends State<DeepLinkListenerScreen> {
       return;
     }
     
-    // --- LÓGICA EXISTENTE: MANEJO DE VOUCHERS ---
     final voucherId = uri.queryParameters['id'];
 
     if (voucherId != null) {
       debugPrint('🎫 Deep Link Handler: ID de Voucher extraído: $voucherId');
       
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        // En un ambiente real, considerar usar un modal en lugar de SnackBar
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Voucher ID recibido: $voucherId.')),
         );
@@ -135,12 +134,10 @@ class _DeepLinkListenerScreenState extends State<DeepLinkListenerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Si la verificación inicial ha terminado, muestra el child (AuthCheckScreen)
     if (_initialCheckDone) {
       return widget.child;
     }
 
-    // Si no, muestra el indicador de carga
     return const Scaffold(
       backgroundColor: Colors.white,
       body: Center(
@@ -148,7 +145,7 @@ class _DeepLinkListenerScreenState extends State<DeepLinkListenerScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             CircularProgressIndicator(
-              color: Color(0xFF1E88E5), // Color para el tema de la app
+              color: Color(0xFF1E88E5),
             ),
             SizedBox(height: 16),
             Text(

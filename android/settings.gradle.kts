@@ -23,4 +23,7 @@ plugins {
     id("org.jetbrains.kotlin.android") version "2.1.0" apply false
 }
 
+// === LÍNEA CRUCIAL AGREGADA ===
 include(":app")
+project(":app").projectDir = file("app")
+// ===============================

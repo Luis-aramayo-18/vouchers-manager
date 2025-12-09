@@ -11,3 +11,39 @@
 -keep class com.google.mlkit.** { *; }
 -keep class com.google.firebase.ml.** { *; }
 -keep class com.google.mlkit.vision.** { *; }
+
+# ProGuard rules for Google ML Kit Text Recognition (needed when using specific language models)
+
+# Keep the ML Kit interfaces and options that are called reflectively/dynamically.
+
+-keep class com.google.mlkit.vision.text.TextRecognizerOptions {
+*;
+}
+
+# Keep the base implementation classes for the language-specific options,
+# even if you are not using all of them. R8 requires them for the initialize function.
+
+-keep class com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions {
+*;
+}
+-keep class com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions$Builder {
+*;
+}
+-keep class com.google.mlkit.vision.text.devanagari.DevanagariTextRecognizerOptions {
+*;
+}
+-keep class com.google.mlkit.vision.text.devanagari.DevanagariTextRecognizerOptions$Builder {
+*;
+}
+-keep class com.google.mlkit.vision.text.japanese.JapaneseTextRecognizerOptions {
+*;
+}
+-keep class com.google.mlkit.vision.text.japanese.JapaneseTextRecognizerOptions$Builder {
+*;
+}
+-keep class com.google.mlkit.vision.text.korean.KoreanTextRecognizerOptions {
+*;
+}
+-keep class com.google.mlkit.vision.text.korean.KoreanTextRecognizerOptions$Builder {
+*;
+}

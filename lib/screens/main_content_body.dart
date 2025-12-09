@@ -434,7 +434,6 @@ class _MainContentBodyState extends State<MainContentBody> with RouteAware {
             ),
           ),
 
-        // 4. Mensaje si no hay recibos (Asegurarse de que no haya un cargador visible)
         if (!_isLoading && _receipts.isEmpty)
           const Expanded(
             child: Center(child: Text('No hay recibos disponibles con este criterio.')),

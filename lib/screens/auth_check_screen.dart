@@ -57,7 +57,6 @@ class _AuthCheckScreenState extends State<AuthCheckScreen> {
           });
 
           if (loggedIn) {
-            // CORRECCIÓN: Se elimina el '!' redundante, ya que 'session' es no-nulo aquí.
             debugPrint('*** AuthCheckScreen: Cambio de estado -> LOGIN. User ID: ${session.user.id}');
             _checkMpLinkStatus(session.user.id);
           } else {
@@ -65,7 +64,6 @@ class _AuthCheckScreenState extends State<AuthCheckScreen> {
             setState(() => _isMpLinked = false);
           }
         } else {
-           // Esto cubre casos como REFRESH_TOKEN o INITIAL_SESSION si el estado no cambió de forma binaria (logged/logged out)
            debugPrint('*** AuthCheckScreen: Estado de sesión se mantiene: $_isLoggedIn');
         }
       }
